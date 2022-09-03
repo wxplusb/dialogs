@@ -120,9 +120,13 @@ def parallel_parse(df: pd.DataFrame, n_first:int = 4, n_last:int = 4,n_jobs:int 
     if n_jobs == -1:
         n_jobs = os.cpu_count()
 
+    global get_parser
+    def get_parser(df: pd.DataFrame):
+        return DialogParser(n_first, n_last).parse(df)
+
     results = []
     with mp.Pool(n_jobs) as pool:
-        for data in pool.imap_unordered(DialogParser(n_first, n_last).parse, get_dialogs(df, n_jobs)):
+        for data in pool.imap_unordered(get_parser, get_dialogs(df, n_jobs)):
                 results.extend(data)
 
     return results
@@ -165,8 +169,6 @@ if __name__ == "__main__":
     df.role = df.role.map({'manager':'client','client':'manager'})
 
     results = parallel_parse(df, args.n_first, args.n_last, args.n_jobs)
-
-
 
     with open(args.output_file, 'wt') as f:
 	    f.write(pprint.pformat(sorted(results,key=lambda item: item['dlg_id']),sort_dicts=False))
