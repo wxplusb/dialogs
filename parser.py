@@ -31,6 +31,7 @@ class DialogParser:
         for i_row, text in se.iteritems():
 
             task = self.current_task()
+            
             if not task:
                 break
 
@@ -49,13 +50,13 @@ class DialogParser:
             # starting rows of dialog 
             start_dialog_df = df.loc[(df['role']=='manager') & (df['dlg_id']==dlg_id),'text'][:self.n_first_rows]
 
-            self.rules = [GREETING,INTRODUCE,COMPANY]
+            self.rules = {'greeting':GREETING,'introduce':INTRODUCE,'company':COMPANY}
             self.parse_part_dialog(start_dialog_df)
 
             # ending rows of dialog 
             end_dialog_df = df.loc[(df['role']=='manager') & (df['dlg_id']==dlg_id),'text'][-self.n_last_rows:]
 
-            self.rules = [BYE]
+            self.rules = {'bye':BYE}
             self.parse_part_dialog(end_dialog_df)
 
             # check the manager greeted and said goodbye to the client
@@ -66,8 +67,13 @@ class DialogParser:
     def reset(self):
         self.dialogs = []
 
+    def remove_rule(self,rule):
+        del self.rules[rule]
+
     def current_task(self):
-        return make_task(self.rules)
+        if self.rules:
+            return make_task(self.rules.values())
+        return None
 
     def extract(self, i_row:int, match):
 
@@ -94,6 +100,8 @@ class DialogParser:
             dialog['bye_text'] = full_text
         else:
             raise TypeError(f'find unknown fact: {value}')
+
+        self.remove_rule(type_subtask)
 
     def check_greet_and_bye(self):
         if self.dialogs[-1].get('greeting_row') and self.dialogs[-1].get('bye_row'):
@@ -172,6 +180,7 @@ if __name__ == "__main__":
 
     with open(args.output_file, 'wt') as f:
 	    f.write(pprint.pformat(sorted(results,key=lambda item: item['dlg_id']),sort_dicts=False))
+        
 
     ext_df = extend_data(df, results)
     ext_df.to_csv('extended_test_data.csv')
